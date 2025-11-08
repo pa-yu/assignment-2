@@ -11,6 +11,7 @@ A Python script that parses an Excel spreadsheet with multiple tabs containing d
 - **Heatmap**: Intensity-based visualization
 - **Marker Clustering**: Automatically groups nearby markers
 - **Multiple Map Layers**: Switch between different map styles
+- **Zoomed out Map**: Map is zoomed out to see all map elements
 
 ## Installation
 
@@ -172,6 +173,7 @@ The script generates an interactive HTML map with:
 - Layer switcher for different map styles
 - Clickable markers with popups
 - Legend for different elements
+- Zoomed out map to see all elements
 
 ## Notes
 

@@ -76,7 +76,30 @@ def add_markers(map_obj, df_markers, use_cluster=True):
 
 
 def add_lines(map_obj, df_lines):
-    pass
+    if df_lines is None or df_lines.empty:
+        return
+
+    for _, row in df_lines.iterrows():
+        coordinates = parse_coordinate_string(row.get('coordinates'))
+        if not coordinates or len(coordinates) < 2:
+            continue
+
+        popup_html = f"<b>{row.get('name', 'Route')}</b>"
+        if pd.notna(row.get('description')):
+            popup_html += f"<br>{row['description']}"
+
+        color   = row.get('color', 'blue') if pd.notna(row.get('color')) else 'blue'
+        weight  = int(row.get('weight', 3)) if pd.notna(row.get('weight')) else 3
+        opacity = float(row.get('opacity', 0.9)) if pd.notna(row.get('opacity')) else 0.9
+
+        folium.PolyLine(
+            locations = coordinates,
+            color = color,
+            weight = weight,
+            opacity = opacity,
+            tooltip = row.get('name', 'Route'),
+            popup = folium.Popup(popup_html, max_width=300)
+        ).add_to(map_obj)
 
 
 def add_polygons(map_obj, df_polygons):
@@ -164,6 +187,7 @@ def create_map_from_excel(excel_file, output_file='map.html',
 
     # Extract dataframes for each tab
     df_markers = excel_data.get('markers')
+    df_lines = excel_data.get("lines")
     df_polygons = excel_data.get('polygons')
     df_heatmap = excel_data.get('heatmap')
     df_circles = excel_data.get('circles')
@@ -173,7 +197,7 @@ def create_map_from_excel(excel_file, output_file='map.html',
         all_lats = []
         all_lons = []
 
-        for df in [df_markers, df_heatmap, df_circles]:
+        for df in [df_markers, df_heatmap, df_circles, df_lines]:
             if df is not None and not df.empty:
                 if 'latitude' in df.columns:
                     all_lats.extend(df['latitude'].dropna().tolist())
@@ -201,6 +225,9 @@ def create_map_from_excel(excel_file, output_file='map.html',
     print("Adding markers...")
     add_markers(m, df_markers, use_cluster=True)
 
+    print("Adding lines...")
+    add_lines(m, df_lines)
+
     print("Adding polygons...")
     add_polygons(m, df_polygons)
 
@@ -209,6 +236,11 @@ def create_map_from_excel(excel_file, output_file='map.html',
 
     print("Adding heatmap...")
     add_heatmap(m, df_heatmap)
+
+    # Zooms out the map so that we can see the whole map
+    bounds = m.get_bounds()
+    if bounds and bounds != [[None, None], [None, None]]:
+        m.fit_bounds(bounds, padding=(30, 30))
 
     # Add layer control
     folium.LayerControl().add_to(m)
@@ -220,6 +252,25 @@ def create_map_from_excel(excel_file, output_file='map.html',
     return m
 
 
+if __name__ == "__main__":
+    import sys, glob
+
+    if len(sys.argv) >= 2 and sys.argv[1].lower().endswith(('.xlsx', '.xls')):
+        excel_file = sys.argv[1]
+        output_file = sys.argv[2] if len(sys.argv) > 2 else 'map.html'
+    else:
+        candidates = sorted(glob.glob("*.xlsx") + glob.glob("*.xls"))
+        if not candidates:
+            print("No Excel file passed and none found in the current folder.")
+            sys.exit(1)
+        excel_file = candidates[0]
+        output_file = 'map.html'
+        print(f"[auto] No args provided; using '{excel_file}'")
+
+    print(f"[main] calling create_map_from_excel('{excel_file}', '{output_file}')")
+    create_map_from_excel(excel_file, output_file)
+
+'''
 if __name__ == "__main__":
     import sys
 
@@ -237,3 +288,4 @@ if __name__ == "__main__":
     output_file = sys.argv[2] if len(sys.argv) > 2 else 'map.html'
 
     create_map_from_excel(excel_file, output_file)
+    '''
